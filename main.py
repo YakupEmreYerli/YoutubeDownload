@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import os
 import threading
+from pathlib import Path
 from yt_dlp import YoutubeDL
 from tkinter import messagebox
 
@@ -80,7 +81,8 @@ class YoutubeDownloaderApp(ctk.CTk):
 
     def download_content(self, url):
         download_type = self.type_var.get()
-        output_path = os.path.join(os.getcwd(), 'downloads')
+        # Get user's Downloads folder (works on Windows, Mac, Linux)
+        output_path = str(Path.home() / "Downloads")
         os.makedirs(output_path, exist_ok=True)
 
         ydl_opts = {
@@ -119,7 +121,7 @@ class YoutubeDownloaderApp(ctk.CTk):
         self.download_btn.configure(state="normal", text="İndir")
         if success:
             self.status_label.configure(text="İşlem Başarıyla Tamamlandı!", text_color="green")
-            messagebox.showinfo("Başarılı", "İndirme tamamlandı! 'downloads' klasörünü kontrol edin.")
+            messagebox.showinfo("Başarılı", "İndirme tamamlandı! İndirilenler klasörünüzü kontrol edin.")
         else:
             self.status_label.configure(text="Hata oluştu.", text_color="red")
             messagebox.showerror("Hata", f"İndirme başarısız oldu:\n{error_msg}")
