@@ -3,3 +3,8 @@ __pycache__/
 downloads/
 .env
 .vscode/
+
+# PyInstaller
+build/
+dist/
+*.spec
