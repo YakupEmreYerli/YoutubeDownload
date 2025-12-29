@@ -90,74 +90,18 @@ class YoutubeDownloaderApp(ctk.CTk):
         )
         self.go_btn.grid(row=0, column=2)
 
-        # 2. Tools Section
-        self.tool_frame = ctk.CTkFrame(self, fg_color=THEME["input_bg"], corner_radius=15, border_width=1, border_color="#232936")
-        self.tool_frame.grid(row=1, column=0, padx=40, pady=30, sticky="ew")
-        self.tool_frame.grid_columnconfigure(1, weight=1)
-
-        self.analyze_btn = ctk.CTkButton(
-            self.tool_frame, 
-            text="VİDEOYU ANALİZ ET", 
-            width=140, 
-            height=36, 
-            font=ctk.CTkFont(size=11, weight="bold"),
-            fg_color=THEME["button_dark"], 
-            hover_color="#2D3748",
-            corner_radius=10,
-            command=self.start_analyze_thread
-        )
-        self.analyze_btn.grid(row=0, column=0, padx=20, pady=20)
-
-        self.time_info = ctk.CTkLabel(self.tool_frame, text="Süre bilgisi bekleniyor", font=ctk.CTkFont(size=12), text_color=THEME["text_dim"])
-        self.time_info.grid(row=0, column=1, sticky="w")
-
-        # Range Box
-        self.range_ui = ctk.CTkFrame(self.tool_frame, fg_color="transparent")
-        self.range_ui.grid(row=0, column=2, padx=20)
-        
-        self.start_in = self.create_small_entry(self.range_ui, "0", 0)
-        self.end_in = self.create_small_entry(self.range_ui, "Bitiş", 1)
-
         # 3. Status Area
         self.status = ctk.CTkLabel(self, text="Sistem Hazır", font=ctk.CTkFont(size=13), text_color=THEME["text_dim"])
-        self.status.grid(row=2, column=0, pady=(15, 8))
+        self.status.grid(row=1, column=0, pady=(15, 8))
         
         self.bar = ctk.CTkProgressBar(self, width=640, height=8, progress_color=THEME["accent"], fg_color="#1E232E", corner_radius=4)
-        self.bar.grid(row=3, column=0, pady=(0, 40))
+        self.bar.grid(row=2, column=0, pady=(0, 40))
         self.bar.set(0)
 
         self._alive = True
-        self.full_duration = 0
 
-    def create_small_entry(self, parent, placeholder, col):
-        e = ctk.CTkEntry(parent, width=70, height=32, placeholder_text=placeholder, fg_color="#0B0E14", border_color="#2D333B", corner_radius=8)
-        e.grid(row=0, column=col, padx=4)
-        return e
 
     # --- LOGIC ---
-    def start_analyze_thread(self):
-        url = self.url_entry.get()
-        if not url: return 
-        self.analyze_btn.configure(state="disabled", text="ANALİZ EDİLİYOR...")
-        threading.Thread(target=self.analyze_video, args=(url,), daemon=True).start()
-
-    def analyze_video(self, url):
-        try:
-            with YoutubeDL({'quiet': True, 'ffmpeg_location': 'C:/ffmpeg/bin'}) as ydl:
-                info = ydl.extract_info(url, download=False)
-                dur = info.get('duration', 0)
-                self.full_duration = dur
-                m, s = dur // 60, dur % 60
-                self.after(0, lambda d=dur, ts=f"{m:02d}:{s:02d}": self.ui_analyze_done(ts, d))
-        except Exception as e:
-            self.after(0, lambda msg=str(e): messagebox.showerror("Hata", f"Analiz hatası: {msg}"))
-        finally:
-            self.after(0, lambda: self.analyze_btn.configure(state="normal", text="VİDEOYU ANALİZ ET"))
-
-    def ui_analyze_done(self, ts, d):
-        self.time_info.configure(text=f"Videonun toplam süresi: {ts}", text_color=THEME["success"])
-        self.end_in.delete(0, 'end')
-        self.end_in.insert(0, str(d))
 
     def start_download_thread(self):
         url = self.url_entry.get()
@@ -189,8 +133,6 @@ class YoutubeDownloaderApp(ctk.CTk):
 
     def download_core(self, url):
         qual = self.quality_var.get()
-        s_time = self.start_in.get().strip() or "0"
-        e_time = self.end_in.get().strip()
         out_path = str(Path.home() / "Downloads")
         
         fmt = "best"
@@ -209,11 +151,7 @@ class YoutubeDownloaderApp(ctk.CTk):
             'format': fmt,
         }
 
-        if s_time != "0" or (e_time and e_time != str(self.full_duration)):
-            try:
-                s, e = float(s_time), float(e_time) if e_time else None
-                opts['download_ranges'] = lambda info, ydl, st=s, et=e: [{'start_time': st, 'end_time': et}]
-            except: pass
+
 
         if audio_only:
             opts['postprocessors'] = [{'key': 'FFmpegExtractAudio','preferredcodec': 'mp3','preferredquality': '320'}]
