@@ -1,4 +1,3 @@
-
 import customtkinter as ctk
 import os
 import threading
@@ -8,6 +7,20 @@ from pathlib import Path
 from yt_dlp import YoutubeDL
 from tkinter import messagebox
 from plyer import notification
+
+import sys
+
+# ... (imports)
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 # --- PREMIUM MINIMALIST DESIGN ---
 ctk.set_appearance_mode("Dark")
@@ -29,6 +42,10 @@ class YoutubeDownloaderApp(ctk.CTk):
 
         # Window Setup
         self.title("Youtube Downloader")
+        try:
+            self.iconbitmap(resource_path("icon.ico"))
+        except:
+            pass
         self.geometry("750x520")
         self.resizable(False, False)
         self.configure(fg_color=THEME["bg"])
