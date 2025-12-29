@@ -28,74 +28,123 @@ class YoutubeDownloaderApp(ctk.CTk):
         super().__init__()
 
         # Window Setup
-        self.title("YouTube Professional")
-        self.geometry("720x440")
+        self.title("Youtube Downloader")
+        self.geometry("750x520")
         self.resizable(False, False)
         self.configure(fg_color=THEME["bg"])
-
-        # Main Layout
+        
+        # Center grid configuration
         self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=1)
 
-        # 1. Unified Input Row
-        self.input_parent = ctk.CTkFrame(self, fg_color="transparent")
-        self.input_parent.grid(row=0, column=0, padx=40, pady=(70, 10), sticky="ew")
+        # Main Container (Centered)
+        self.main_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.main_frame.grid(row=0, column=0, padx=20, pady=20, sticky="nsew")
+        self.main_frame.grid_columnconfigure(0, weight=1)
+        self.main_frame.grid_rowconfigure((0, 4), weight=1) # Spacer top/bottom
+
+        # 1. Header Section
+        self.header_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.header_frame.grid(row=0, column=0, pady=(20, 40))
+        
+        self.header_label = ctk.CTkLabel(
+            self.header_frame, 
+            text="Youtube Downloader", 
+            font=ctk.CTkFont(family="Arial", size=32, weight="bold"),
+            text_color=THEME["accent"]
+        )
+        self.header_label.pack()
+        
+        self.subheader_label = ctk.CTkLabel(
+            self.header_frame, 
+            text="", 
+            font=ctk.CTkFont(family="Arial", size=13, weight="normal"),
+            text_color=THEME["text_dim"]
+        )
+        self.subheader_label.pack(pady=(2, 0))
+
+        # 2. Input Section
+        self.input_parent = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.input_parent.grid(row=1, column=0, sticky="ew", padx=60)
         self.input_parent.grid_columnconfigure(0, weight=1)
 
         # URL Entry
         self.url_entry = ctk.CTkEntry(
             self.input_parent, 
-            placeholder_text="Linkinizi buraya bırakın...", 
-            height=52, 
+            placeholder_text="YouTube video bağlantısını yapıştırın...", 
+            height=54, 
             fg_color=THEME["input_bg"], 
             border_color="#2D333B", 
             border_width=1,
-            corner_radius=12,
-            font=ctk.CTkFont(size=14)
+            corner_radius=14,
+            font=ctk.CTkFont(size=14),
+            placeholder_text_color=THEME["text_dim"],
+            text_color=THEME["text_main"]
         )
-        self.url_entry.grid(row=0, column=0, padx=(0, 10), sticky="ew")
+        self.url_entry.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 16))
 
-        # Quality Select (Customized ComboBox for "Filled" feel)
+        # Controls Row
+        self.controls_frame = ctk.CTkFrame(self.input_parent, fg_color="transparent")
+        self.controls_frame.grid(row=1, column=0, columnspan=2, sticky="ew")
+        self.controls_frame.grid_columnconfigure((0, 1), weight=1) # Equal split
+
+        # Quality Select
         self.qualities = ["Otomatik (1080p)", "2160p 4K", "1440p 2K", "1080p FHD", "720p HD", "480p SD", "MP3 Sadece Ses"]
         self.quality_var = ctk.StringVar(value=self.qualities[0])
         self.quality_menu = ctk.CTkComboBox(
-            self.input_parent, 
+            self.controls_frame, 
             values=self.qualities, 
             variable=self.quality_var,
-            width=180, 
-            height=52, 
+            height=50, 
             fg_color=THEME["input_bg"],
             border_color="#2D333B",
-            button_color=THEME["accent"],      # İçi boyalı ok alanı
+            button_color=THEME["button_dark"],
             button_hover_color=THEME["accent_sub"],
-            border_width=0,
+            border_width=1,
             corner_radius=12,
             font=ctk.CTkFont(size=13),
             dropdown_font=ctk.CTkFont(size=13),
             dropdown_fg_color=THEME["input_bg"],
-            dropdown_hover_color=THEME["accent"]
+            dropdown_hover_color=THEME["button_dark"],
+            text_color=THEME["text_main"]
         )
-        self.quality_menu.grid(row=0, column=1, padx=(0, 10))
+        self.quality_menu.grid(row=0, column=0, sticky="ew", padx=(0, 8))
 
-        # Action Button (Solid Icon: ➤)
+        # Action Button
         self.go_btn = ctk.CTkButton(
-            self.input_parent, 
-            text="➤", # Solid-filled arrow icon
+            self.controls_frame, 
+            text="İndirmeyi Başlat", 
             command=self.start_download_thread, 
-            height=52, 
-            width=65, 
+            height=50, 
             fg_color=THEME["accent"], 
             hover_color=THEME["accent_sub"], 
-            font=ctk.CTkFont(size=20, weight="bold"),
-            corner_radius=12
+            font=ctk.CTkFont(size=14, weight="bold"),
+            corner_radius=12,
+            text_color="#FFFFFF"
         )
-        self.go_btn.grid(row=0, column=2)
+        self.go_btn.grid(row=0, column=1, sticky="ew", padx=(8, 0))
 
-        # 3. Status Area
-        self.status = ctk.CTkLabel(self, text="Sistem Hazır", font=ctk.CTkFont(size=13), text_color=THEME["text_dim"])
-        self.status.grid(row=1, column=0, pady=(15, 8))
+        # 3. Status Section
+        self.status_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
+        self.status_frame.grid(row=2, column=0, pady=(40, 0))
         
-        self.bar = ctk.CTkProgressBar(self, width=640, height=8, progress_color=THEME["accent"], fg_color="#1E232E", corner_radius=4)
-        self.bar.grid(row=2, column=0, pady=(0, 40))
+        self.status = ctk.CTkLabel(
+            self.status_frame, 
+            text="İndirme yapmak için hazırım", 
+            font=ctk.CTkFont(size=13), 
+            text_color=THEME["text_dim"]
+        )
+        self.status.pack(pady=(0, 10))
+        
+        self.bar = ctk.CTkProgressBar(
+            self.status_frame, 
+            width=500, 
+            height=6, 
+            progress_color=THEME["accent"], 
+            fg_color=THEME["button_dark"], 
+            corner_radius=3
+        )
+        self.bar.pack()
         self.bar.set(0)
 
         self._alive = True
@@ -106,8 +155,8 @@ class YoutubeDownloaderApp(ctk.CTk):
     def start_download_thread(self):
         url = self.url_entry.get()
         if not url: return
-        self.go_btn.configure(state="disabled", text="•")
-        self.status.configure(text="İndirme işlemi başlatıldı...", text_color=THEME["accent"])
+        self.go_btn.configure(state="disabled", text="İşleniyor...")
+        self.status.configure(text="Bağlantı analiz ediliyor...", text_color=THEME["accent"])
         self.bar.set(0)
         threading.Thread(target=self.download_core, args=(url,), daemon=True).start()
 
@@ -121,10 +170,10 @@ class YoutubeDownloaderApp(ctk.CTk):
                 sp_raw = d.get('_speed_str', '0KB/s').strip()
                 sp = re.sub(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])', '', sp_raw).replace('iB/s', ' MB')
                 pct = f"{p*100:.1f}"
-                self.after(0, lambda v=p, t=f"%{pct}  •  İndirme Hızı: {sp}": self.update_ui(v, t))
+                self.after(0, lambda v=p, t=f"%{pct}  •  {sp}": self.update_ui(v, t))
             except: pass
         elif d['status'] == 'finished':
-            self.after(0, lambda: self.update_ui(1.0, "FFmpeg süreci işleniyor...", THEME["success"]))
+            self.after(0, lambda: self.update_ui(1.0, "Dönüştürme işlemi yapılıyor...", THEME["success"]))
 
     def update_ui(self, val, txt, color=None):
         if not color: color = THEME["text_dim"]
@@ -151,8 +200,6 @@ class YoutubeDownloaderApp(ctk.CTk):
             'format': fmt,
         }
 
-
-
         if audio_only:
             opts['postprocessors'] = [{'key': 'FFmpegExtractAudio','preferredcodec': 'mp3','preferredquality': '320'}]
         else:
@@ -166,15 +213,15 @@ class YoutubeDownloaderApp(ctk.CTk):
             self.after(0, lambda msg=str(e): self.download_done(False, msg))
 
     def download_done(self, success, err=""):
-        self.go_btn.configure(state="normal", text="➤")
+        self.go_btn.configure(state="normal", text="İndirmeyi Başlat")
         if success:
-            self.status.configure(text="İŞLEM BAŞARIYLA TAMAMLANDI", text_color=THEME["success"])
+            self.status.configure(text="İndirme Tamamlandı!", text_color=THEME["success"])
             try:
-                notification.notify(title='Aura Pro', message='Dosya indirildi!', timeout=3)
+                notification.notify(title='Youtube Downloader', message='Dosya başarıyla indirildi.', timeout=3)
                 if os.name == 'nt': ctypes.windll.user32.FlashWindow(self.winfo_id(), True)
             except: pass
         else:
-            self.status.configure(text="HATA", text_color=THEME["error"])
+            self.status.configure(text="Hata Oluştu", text_color=THEME["error"])
             messagebox.showerror("Hata", f"İşlem başarısız: {err}")
 
 if __name__ == "__main__":
