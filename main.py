@@ -2,16 +2,17 @@ import customtkinter as ctk
 import os
 import threading
 import re
+import ctypes  # Windows bildirimleri için
 from pathlib import Path
 from yt_dlp import YoutubeDL
 from tkinter import messagebox
 
 # App Configuration
 ctk.set_appearance_mode("Dark")
-ACCENT_COLOR = "#404b62"  # İstediğiniz özel mavi-gri tonu
+ACCENT_COLOR = "#404b62"
 ACCENT_HOVER = "#4d5b78"
-BG_COLOR = "#242424"     # Önceki versiyondaki koyu gri tonu
-ENTRY_BG = "#2b2b2b"    # Giriş alanı için hafif açık ton
+BG_COLOR = "#242424"
+ENTRY_BG = "#2b2b2b"
 TEXT_COLOR = "#ffffff"
 SECONDARY_TEXT = "#bbbbbb"
 
@@ -20,8 +21,8 @@ class YoutubeDownloaderApp(ctk.CTk):
         super().__init__()
 
         # Window Config
-        self.title("YouTube İndirici - MP3 & MP4")
-        self.geometry("600x420")
+        self.title("YouTube İndirici Pro")
+        self.geometry("620x420") 
         self.resizable(False, False)
         self.configure(fg_color=BG_COLOR)
 
@@ -31,81 +32,86 @@ class YoutubeDownloaderApp(ctk.CTk):
         # Title
         self.title_label = ctk.CTkLabel(
             self, 
-            text="YouTube Video/Ses İndirici", 
+            text="YouTube Çoklu İndirici", 
             font=ctk.CTkFont(size=26, weight="bold"),
             text_color="white"
         )
         self.title_label.grid(row=0, column=0, padx=20, pady=(30, 20))
 
-        # URL Input
+        # Main Input Frame
+        self.input_frame = ctk.CTkFrame(self, fg_color="transparent")
+        self.input_frame.grid(row=1, column=0, padx=20, pady=5, sticky="ew")
+        
+        # URL Entry - Width adjusted to prevent overlap
         self.url_entry = ctk.CTkEntry(
-            self, 
-            placeholder_text="YouTube Linkini Buraya Yapıştırın", 
-            width=450,
-            height=40,
+            self.input_frame, 
+            placeholder_text="YouTube Linkini Girin", 
+            height=45,
+            width=320,
             fg_color=ENTRY_BG,
             border_color="#3f3f3f",
             text_color="white"
         )
-        self.url_entry.grid(row=1, column=0, padx=20, pady=10)
+        self.url_entry.grid(row=0, column=0, padx=(0, 2))
 
-        # Download Button
+        # Quality Selection - Width fixed and padded slightly
+        self.qualities = [
+            "MP4 - Otomatik (1080p)",
+            "MP4 - 2160p 4K",
+            "MP4 - 1440p 2K",
+            "MP4 - 1080p Full HD",
+            "MP4 - 720p HD",
+            "MP4 - 480p SD",
+            "MP3 - Sadece Ses"
+        ]
+        self.quality_var = ctk.StringVar(value=self.qualities[0])
+        self.quality_dropdown = ctk.CTkComboBox(
+            self.input_frame, 
+            values=self.qualities, 
+            variable=self.quality_var,
+            width=200, 
+            height=45,
+            fg_color=ENTRY_BG,
+            button_color=ACCENT_COLOR,
+            button_hover_color=ACCENT_HOVER,
+            border_color="#444444",
+            dropdown_fg_color=ENTRY_BG,
+            dropdown_hover_color=ACCENT_COLOR
+        )
+        self.quality_dropdown.grid(row=0, column=1, padx=(0, 2))
+
+        # Download Button - Smaller Enter Icon (⏎)
         self.download_btn = ctk.CTkButton(
-            self, 
-            text="İNDİR", 
+            self.input_frame, 
+            text="⏎",
             command=self.start_download_thread, 
             height=45, 
-            width=200,
-            font=ctk.CTkFont(size=16, weight="bold"),
+            width=50,
+            font=ctk.CTkFont(size=20, weight="bold"), # Slightly smaller for better look
             fg_color=ACCENT_COLOR,
             hover_color=ACCENT_HOVER,
             text_color="#ffffff"
         )
-        self.download_btn.grid(row=2, column=0, padx=20, pady=(20, 10))
-
-        # Type Selection (MP3/MP4) - Smaller and below button
-        self.type_var = ctk.StringVar(value="mp4")
-        self.radio_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.radio_frame.grid(row=3, column=0, padx=20, pady=5)
-        
-        self.radio_mp4 = ctk.CTkRadioButton(
-            self.radio_frame, 
-            text="MP4 (Video)", 
-            variable=self.type_var, 
-            value="mp4",
-            border_color="#aaaaaa",
-            hover_color=ACCENT_COLOR,
-            fg_color=ACCENT_COLOR,
-            text_color="white",
-            font=ctk.CTkFont(size=12)
-        )
-        self.radio_mp4.grid(row=0, column=0, padx=15, pady=5)
-        
-        self.radio_mp3 = ctk.CTkRadioButton(
-            self.radio_frame, 
-            text="MP3 (Ses)", 
-            variable=self.type_var, 
-            value="mp3",
-            border_color="#aaaaaa",
-            hover_color=ACCENT_COLOR,
-            fg_color=ACCENT_COLOR,
-            text_color="white",
-            font=ctk.CTkFont(size=12)
-        )
-        self.radio_mp3.grid(row=0, column=1, padx=15, pady=5)
+        self.download_btn.grid(row=0, column=2, padx=0)
 
         # Status & Progress
         self.status_label = ctk.CTkLabel(self, text="Hazır", text_color=SECONDARY_TEXT, font=ctk.CTkFont(size=13, weight="bold"))
-        self.status_label.grid(row=4, column=0, padx=20, pady=(15, 5))
+        self.status_label.grid(row=2, column=0, padx=20, pady=(20, 5))
         
         self.progress_bar = ctk.CTkProgressBar(
             self, 
-            width=450, 
+            width=580, 
             progress_color=ACCENT_COLOR,
             fg_color="#333333"
         )
-        self.progress_bar.grid(row=5, column=0, padx=20, pady=(0, 20))
+        self.progress_bar.grid(row=3, column=0, padx=20, pady=(0, 30))
         self.progress_bar.set(0)
+
+        self._is_running = True
+
+    def on_closing(self):
+        self._is_running = False
+        self.destroy()
 
     def start_download_thread(self):
         url = self.url_entry.get()
@@ -113,68 +119,78 @@ class YoutubeDownloaderApp(ctk.CTk):
             messagebox.showerror("Hata", "Lütfen bir YouTube linki girin.")
             return
         
-        self.download_btn.configure(state="disabled", text="İndiriliyor...")
+        self.download_btn.configure(state="disabled", text="...")
         self.status_label.configure(text="İşlem başlıyor...", text_color=ACCENT_COLOR)
         self.progress_bar.set(0)
         
-        thread = threading.Thread(target=self.download_content, args=(url,))
+        thread = threading.Thread(target=self.download_content, args=(url,), daemon=True)
         thread.start()
 
     def progress_hook(self, d):
+        if not self._is_running: return
+        
         if d['status'] == 'downloading':
             try:
-                # Use numeric data for smoother progress calculation
                 total = d.get('total_bytes') or d.get('total_bytes_estimate')
                 downloaded = d.get('downloaded_bytes', 0)
                 
                 if total:
                     percentage = downloaded / total
-                    percent_str = f"{percentage*100:.1f}%"
+                    percent_str = f"{percentage*100:.1f}"
                 else:
-                    # Fallback to string parsing if bytes are missing
-                    percent_str = d.get('_percent_str', '0%').replace('%', '').strip()
-                    percentage = float(percent_str) / 100
-                    percent_str = f"{percent_str}%"
+                    percent_raw = d.get('_percent_str', '100%')
+                    percent_clean = re.sub(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])', '', percent_raw)
+                    percentage = float(percent_clean.replace('%', '').strip()) / 100
+                    percent_str = f"{percentage*100:.1f}"
 
-                # Clean speed string and remove ANSI color codes using regex
                 speed_raw = d.get('_speed_str', '0KB/s').strip()
-                # Remove ANSI escape sequences (the weird [0;32m things)
                 speed_clean = re.sub(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])', '', speed_raw)
-                
-                # Format speed simply (e.g., 5.25MiB/s -> 5.25 MB)
                 speed = speed_clean.replace('iB/s', ' MB').replace('B/s', ' B')
                 
-                # Also clean percent_str just in case it has codes
-                ps_clean = re.sub(r'\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])', '', percent_str).replace('%', '').strip()
-                
-                # Update UI on main thread
-                self.after(0, lambda p=percentage, s=speed, ps=ps_clean: 
+                self.after(0, lambda p=percentage, s=speed, ps=percent_str: 
                            self.update_progress(p, f"%{ps}   İndirme Hızı: {s}"))
             except Exception:
                 pass
         elif d['status'] == 'finished':
-            self.after(0, lambda: self.update_progress(1.0, "Tamamlandı! İşleniyor...", "#2ecc71"))
+            self.after(0, lambda: self.update_progress(1.0, "Uzantı Değiştiriliyor... FFmpeg Aktif", "#2ecc71"))
 
     def update_progress(self, value, status_text, color="#aaaaaa"):
+        if not self._is_running: return
         self.status_label.configure(text=status_text, text_color=color)
         self.progress_bar.set(value)
 
     def download_content(self, url):
-        download_type = self.type_var.get()
+        quality_choice = self.quality_var.get()
         output_path = str(Path.home() / "Downloads")
-        os.makedirs(output_path, exist_ok=True)
+        
+        format_str = "best"
+        is_audio = False
+
+        if "2160p" in quality_choice:
+            format_str = "bestvideo[height<=2160]+bestaudio/best"
+        elif "1440p" in quality_choice:
+            format_str = "bestvideo[height<=1440]+bestaudio/best"
+        elif "1080p" in quality_choice:
+            format_str = "bestvideo[height<=1080]+bestaudio/best"
+        elif "720p" in quality_choice:
+            format_str = "bestvideo[height<=720]+bestaudio/best"
+        elif "480p" in quality_choice:
+            format_str = "bestvideo[height<=480]+bestaudio/best"
+        elif "Ses" in quality_choice:
+            is_audio = True
+            format_str = "bestaudio/best"
 
         ydl_opts = {
             'outtmpl': os.path.join(output_path, '%(title)s.%(ext)s'),
             'progress_hooks': [self.progress_hook],
             'noplaylist': True,
             'ffmpeg_location': 'C:/ffmpeg/bin',
-            'no_color': True,  # Renk kodlarını kapat
+            'no_color': True,
+            'format': format_str,
         }
 
-        if download_type == "mp3":
+        if is_audio:
             ydl_opts.update({
-                'format': 'bestaudio/best',
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
@@ -182,28 +198,59 @@ class YoutubeDownloaderApp(ctk.CTk):
                 }],
             })
         else:
-            ydl_opts.update({
-                'format': 'best', 
-            })
+            ydl_opts.update({'merge_output_format': 'mp4'})
 
         try:
             with YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
             
-            self.after(0, lambda: self.finish_download(True))
+            if self._is_running:
+                self.after(0, lambda: self.finish_download(True))
         except Exception as e:
             error_text = str(e)
-            self.after(0, lambda msg=error_text: self.finish_download(False, msg))
+            if self._is_running:
+                self.after(0, lambda msg=error_text: self.finish_download(False, msg))
 
     def finish_download(self, success, error_msg=""):
-        self.download_btn.configure(state="normal", text="İNDİR")
+        if not self._is_running: return
+        self.download_btn.configure(state="normal", text="⏎")
         if success:
-            self.status_label.configure(text="İşlem Başarıyla Tamamlandı!", text_color="#2ecc71")
-            messagebox.showinfo("Başarılı", "İndirme tamamlandı! İndirilenler klasörünüzü kontrol edin.")
+            self.status_label.configure(text="Başarıyla Tamamlandı!", text_color="#2ecc71")
+            # Windows Görev Çubuğu Bildirimi (Yanıp Sönme)
+            try:
+                if os.name == 'nt':
+                    # HWND'yi alalım (winfo_id Windows'ta HWND'dir)
+                    hwnd = self.winfo_id()
+                    
+                    # FLASHWINFO yapısı
+                    class FLASHWINFO(ctypes.Structure):
+                        _fields_ = [
+                            ('cbSize', ctypes.c_uint),
+                            ('hwnd', ctypes.c_void_p),
+                            ('dwFlags', ctypes.c_uint),
+                            ('uCount', ctypes.c_uint),
+                            ('dwTimeout', ctypes.c_uint)
+                        ]
+                    
+                    # dwFlags Sabitleri: FLASHW_TRAY | FLASHW_TIMERNOFG (Pencere odağa gelene kadar yanıp sön)
+                    FLASHW_TRAY = 0x00000002
+                    FLASHW_TIMERNOFG = 0x0000000C
+                    
+                    info = FLASHWINFO(
+                        cbSize=ctypes.sizeof(FLASHWINFO),
+                        hwnd=hwnd,
+                        dwFlags=FLASHW_TRAY | FLASHW_TIMERNOFG,
+                        uCount=0,
+                        dwTimeout=0
+                    )
+                    ctypes.windll.user32.FlashWindowEx(ctypes.byref(info))
+            except Exception as e:
+                print(f"Bildirim Hatası: {e}")
         else:
-            self.status_label.configure(text="Hata oluştu.", text_color="#e74c3c")
-            messagebox.showerror("Hata", f"İndirme başarısız oldu:\n{error_msg}")
+            self.status_label.configure(text="Hata Oluştu.", text_color="#e74c3c")
+            messagebox.showerror("Hata", f"İndirme başarısız!")
 
 if __name__ == "__main__":
     app = YoutubeDownloaderApp()
+    app.protocol("WM_DELETE_WINDOW", app.on_closing)
     app.mainloop()
